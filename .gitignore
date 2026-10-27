@@ -1,0 +1,17 @@
+# Local files and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# Local/editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Sensitive workflow dumps and execution data
+executions/
+*.log

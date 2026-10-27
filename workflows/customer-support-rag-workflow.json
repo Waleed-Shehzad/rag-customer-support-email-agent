@@ -1,0 +1,283 @@
+{
+  "name": "RAG Customer Support Email Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "maxResults": 5,
+        "filters": {
+          "labelIds": [
+            "REPLACE_WITH_YOUR_GMAIL_LABEL_ID"
+          ],
+          "readStatus": "both"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -912,
+        128
+      ],
+      "id": "6235440e-bfcd-4b63-b88c-9b78cc3a996c",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "You are the email support assistant for BrewNest Coffee Co., an online store that sells the BrewNest Aroma One smart coffee maker, accessories, and coffee beans.\n\nYour job is to read a customer's email and write a helpful reply using ONLY information from the BrewNest knowledge base.\n\n## How to work\n1. Read the customer's email carefully and identify every question they ask.\n2. ALWAYS use the knowledge base tool to search for the answer before replying. Search separately for each question if there is more than one.\n3. Answer using only facts found in the knowledge base. Copy prices, time periods, countries, and policy details exactly as written.\n\n## Strict rules\n- Never make up prices, discounts, policies, shipping countries, features, or contact details.\n- If the answer is not in the knowledge base, say: \"I don't have that information right now, but our support team can help. Please contact us at support@brewnest-coffee.com.\" Do not guess.\n- If only part of an email can be answered, answer that part and say which part you could not answer.\n- Do not promise refunds, replacements, or exceptions to policies. For order-specific problems (damaged items, missing packages, warranty claims), explain the policy and ask the customer to email support@brewnest-coffee.com with their order number.\n- Never ask the customer for passwords or full card numbers.\n- Do not mention the knowledge base, documents, AI, or that you are a bot.\n\n## Reply format\n- Write only the email body. Do not include a subject line.\n- Start with \"Hi [customer's first name],\" if the name is known, otherwise \"Hi there,\".\n- Keep it short and friendly: 2 to 6 sentences for simple questions.\n- If the customer asked several questions, answer each one in a short separate paragraph.\n- Reply in the same language the customer wrote in.\n- End with:\n\nBest regards,\nBrewNest Support Team\nsupport@brewnest-coffee.com | +1 (555) 214-7788"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -656,
+        -80
+      ],
+      "id": "0cf146e5-8583-420d-9f0f-08c428f82969",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -688,
+        160
+      ],
+      "id": "9583304d-3e86-4e6f-b792-ba87a5799971",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        128
+      ],
+      "id": "2b1002ca-f0b4-426f-9dc0-def356d59634",
+      "name": "Reply to a message",
+      "webhookId": "349a15b9-8fdc-51a7-a4ad-0b9208891752"
+    },
+    {
+      "parameters": {
+        "formTitle": "Knowledge Base Document Upload",
+        "formDescription": "Upload product, FAQ, and policy documents for the AI support agent.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "file",
+              "fieldType": "file"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -912,
+        672
+      ],
+      "id": "22deb9aa-dde6-41db-8a17-5ce478458eb3",
+      "name": "On form submission",
+      "webhookId": "a5b1e52f-f79c-5983-a7fe-5898a2cbf7ee"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n1",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        672
+      ],
+      "id": "27c9f272-daa1-43a6-86ac-34479f1fdc55",
+      "name": "Pinecone Vector Store"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-2"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -688,
+        896
+      ],
+      "id": "e337c018-36de-4337-adf8-5e668588da2d",
+      "name": "Embeddings Google Gemini"
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -560,
+        896
+      ],
+      "id": "c4e4c26d-d0e5-4492-9231-8b8d1bec3aee",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "extract data",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n1",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        -560,
+        160
+      ],
+      "id": "21071b8b-6319-45f2-81c1-113132ff02ef",
+      "name": "Pinecone Vector Store1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-2"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        368
+      ],
+      "id": "5b0d563a-08dd-4ba3-9eb6-e7909622d587",
+      "name": "Embeddings Google Gemini1"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
